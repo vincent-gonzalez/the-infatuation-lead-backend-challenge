@@ -6,6 +6,8 @@ import (
 	//"os"
 	//"io"
 	"net"
+	"strings"
+	"strconv"
 )
 
 func main() {
@@ -48,6 +50,7 @@ func main() {
 	reader := bufio.NewReader(connection);
 	fmt.Println("Waiting for server...");
 	isAllEventsReceived := false;
+	var likeEvents []LikeEvent;
 	for !isAllEventsReceived {
 		//buffer := make([]byte, 1024);
 		//messageLength, err := connection.Read(buffer);
@@ -57,7 +60,18 @@ func main() {
 		}
 		//message := string(buffer[:messageLength]);
 		message = message[:len(message)-1]
-		fmt.Println("Message received: ", message);
+		messageParts := strings.Split(message, "|");
+		sequenceNum, err := strconv.ParseUint(messageParts[0], 10, 64);
+		if err != nil {
+			fmt.Println("Sequence Num not number: ", err.Error());
+		}
+		likeEvents = append(likeEvents, LikeEvent{
+			SequenceNum: sequenceNum,
+			LikeType: messageParts[1],
+			FromUserId: messageParts[2],
+			ToUserId: messageParts[3],
+		});
+		//fmt.Println("Message received: ", message);
 		if message == "EVENT END" {
 			isAllEventsReceived = true;
 			//connection.Close();
@@ -68,4 +82,8 @@ func main() {
 	fmt.Println("All messages received.");
 	fmt.Println("Connection closed.");
 	fmt.Println("Server shutdown.");
+	fmt.Println("Printing received messages...");
+	for _, event := range likeEvents {
+		fmt.Printf("Sequence Num: %d Like Type: %s From User: %s To User: %s", event.SequenceNum, event.LikeType, event.FromUserId, event.ToUserId);
+	}
 }
