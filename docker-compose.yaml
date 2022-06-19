@@ -1,0 +1,11 @@
+version: "3.9"
+services:
+  datinggame:
+    image: gcr.io/hiring-278615/datinggame
+    environment:
+      - LOG_LEVEL=info
+      - SEQUENCE_COUNT=1000000
+      - USER_COUNT=9000
+    ports:
+      - "9090:9090"
+      - "9099:9099"
