@@ -6,5 +6,11 @@ SOURCE-DIR=src
 build:
 	cd ./$(SOURCE-DIR); go build -o "../$(BUILD-DIR)/$(EXE-NAME)"
 
-run: build
+buildRun: build
 	./$(BUILD-DIR)/$(EXE-NAME)
+
+run:
+	./$(BUILD-DIR)/$(EXE-NAME)
+
+test:
+	cd ./$(SOURCE-DIR); go test
