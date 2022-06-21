@@ -3,15 +3,34 @@ package main
 import (
 	"bufio"
 	"fmt"
-	// "math/rand"
 	"net"
 	"strconv"
 	"strings"
-	// "time"
 )
 
+// func ReceiveEventsOLD(protocol string, eventSourceURL string, port uint) ([]LikeEvent, error) {
+// 	// Put param checking here
+// 	fmt.Println("Connecting to EVENT SOURCE...")
+// 	eventSourceConnection, err := net.Dial(protocol, fmt.Sprintf("%s:%d", eventSourceURL, port));
+// 	if err != nil {
+// 		fmt.Println("Error connecting to EVENT SOURCE:", err.Error())
+// 		return nil, err
+// 	}
+// 	defer eventSourceConnection.Close()
+
+// 	events, err := GetLikeEvents(eventSourceConnection);
+// 	if err != nil {
+// 		fmt.Println(err.Error())
+// 		return nil, err
+// 	}
+// 	fmt.Println("All messages received.");
+// 	fmt.Println("Connection to EVENT SOURCE closed.");
+
+// 	return events, nil
+// }
+
 func ReceiveEvents(protocol string, eventSourceURL string, port uint) ([]LikeEvent, error) {
-	// Put param checking here
+	fmt.Println("Connecting to EVENT SOURCE...")
 	eventSourceConnection, err := net.Dial(protocol, fmt.Sprintf("%s:%d", eventSourceURL, port));
 	if err != nil {
 		fmt.Println("Error connecting to EVENT SOURCE:", err.Error())
@@ -19,53 +38,57 @@ func ReceiveEvents(protocol string, eventSourceURL string, port uint) ([]LikeEve
 	}
 	defer eventSourceConnection.Close()
 
-	events, err := GetLikeEvents(eventSourceConnection);
-	if err != nil {
-		fmt.Println(err.Error())
-		return nil, err
-	}
+	// var likeEvents []LikeEvent
+	scanner := bufio.NewScanner(eventSourceConnection)
+	// for scanner.Scan() {
+	// 	message := scanner.Text()
+	// 	if message == "EVENT BEGIN" {
+	// 		fmt.Println(message)
+	// 	} else if message == "EVENT END" {
+	// 		fmt.Println(message)
+	// 		break
+	// 	} else {
+	// 		messageParts := strings.Split(message, "|")
+	// 		sequenceNum, err := strconv.ParseUint(messageParts[0], 10, 64)
+	// 		if err != nil {
+	// 			fmt.Println("Sequence Num not number: ", err.Error())
+	// 		}
 
-	return events, nil
+	// 		newLikeEvent := LikeEvent{
+	// 			SequenceNum: sequenceNum,
+	// 			LikeType: messageParts[1],
+	// 			FromUserId: messageParts[2],
+	// 			ToUserId: messageParts[3],
+	// 		}
+
+	// 		likeEvents = append(likeEvents, newLikeEvent)
+	// 	}
+	// }
+	likeEvents, _ := ParseEvents(scanner)
+
+	return likeEvents, nil
 }
 
-func GetLikeEvents(eventSourceConnection net.Conn) ([]LikeEvent, error) {
-	reader := bufio.NewReader(eventSourceConnection)
-	isAllEventsReceived := false
+func ParseEvents(scanner *bufio.Scanner) ([]LikeEvent, error) {
 	var likeEvents []LikeEvent
 
-	for !isAllEventsReceived {
-		message, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Println("Error reading event:", err.Error())
-		}
-		message = message[:len(message)-1]
+	// wait for EVENT SOURCE to send start message
+	for scanner.Scan() && scanner.Text() != "EVENT BEGIN" {
+		fmt.Println("Waiting for EVENT SOURCE to send events...")
+	}
+	fmt.Println("EVENT BEGIN")
 
-		if message == "EVENT BEGIN" {
-			fmt.Println("START receiving events...")
-			continue
-		} else if message == "EVENT END" {
-			fmt.Println("END receiving events...")
-			isAllEventsReceived = true
+	for scanner.Scan() {
+		message := scanner.Text()
+
+		if message == "EVENT END" {
+			fmt.Println(message)
+			break
 		} else {
 			messageParts := strings.Split(message, "|")
-
-			// if messageParts[1] == "LIKE_LIKED" {
-			// 	sequenceNum, err := strconv.ParseUint(messageParts[0], 10, 64)
-			// 	if err != nil {
-			// 		fmt.Println("Sequence Num not number: ", err.Error())
-			// 	}
-
-			// 	newLikeEvent := LikeEvent{
-			// 		SequenceNum: sequenceNum,
-			// 		LikeType: messageParts[1],
-			// 		FromUserId: messageParts[2],
-			// 		ToUserId: messageParts[3],
-			// 	}
-			// 	likeEvents = append(likeEvents, newLikeEvent)
-			// }
 			sequenceNum, err := strconv.ParseUint(messageParts[0], 10, 64)
 			if err != nil {
-				fmt.Println("Sequence Num not number: ", err.Error())
+				fmt.Println("Input sequence number is not a number: ", err.Error())
 			}
 
 			newLikeEvent := LikeEvent{
@@ -74,6 +97,7 @@ func GetLikeEvents(eventSourceConnection net.Conn) ([]LikeEvent, error) {
 				FromUserId: messageParts[2],
 				ToUserId: messageParts[3],
 			}
+
 			likeEvents = append(likeEvents, newLikeEvent)
 		}
 	}
@@ -81,7 +105,63 @@ func GetLikeEvents(eventSourceConnection net.Conn) ([]LikeEvent, error) {
 	return likeEvents, nil
 }
 
+// func GetLikeEvents(eventSourceConnection net.Conn) ([]LikeEvent, error) {
+// 	reader := bufio.NewReader(eventSourceConnection)
+// 	isAllEventsReceived := false
+// 	var likeEvents []LikeEvent
+
+// 	for !isAllEventsReceived {
+// 		message, err := reader.ReadString('\n')
+// 		if err != nil {
+// 			fmt.Println("Error reading event:", err.Error())
+// 		}
+// 		message = message[:len(message)-1]
+
+// 		if message == "EVENT BEGIN" {
+// 			// START receiving events...
+// 			fmt.Println(message)
+// 			continue
+// 		} else if message == "EVENT END" {
+// 			// END receiving events...
+// 			fmt.Println(message)
+// 			isAllEventsReceived = true
+// 		} else {
+// 			messageParts := strings.Split(message, "|")
+
+// 			// if messageParts[1] == "LIKE_LIKED" {
+// 			// 	sequenceNum, err := strconv.ParseUint(messageParts[0], 10, 64)
+// 			// 	if err != nil {
+// 			// 		fmt.Println("Sequence Num not number: ", err.Error())
+// 			// 	}
+
+// 			// 	newLikeEvent := LikeEvent{
+// 			// 		SequenceNum: sequenceNum,
+// 			// 		LikeType: messageParts[1],
+// 			// 		FromUserId: messageParts[2],
+// 			// 		ToUserId: messageParts[3],
+// 			// 	}
+// 			// 	likeEvents = append(likeEvents, newLikeEvent)
+// 			// }
+// 			sequenceNum, err := strconv.ParseUint(messageParts[0], 10, 64)
+// 			if err != nil {
+// 				fmt.Println("Sequence Num not number: ", err.Error())
+// 			}
+
+// 			newLikeEvent := LikeEvent{
+// 				SequenceNum: sequenceNum,
+// 				LikeType: messageParts[1],
+// 				FromUserId: messageParts[2],
+// 				ToUserId: messageParts[3],
+// 			}
+// 			likeEvents = append(likeEvents, newLikeEvent)
+// 		}
+// 	}
+
+// 	return likeEvents, nil
+// }
+
 func FindMatchEvents(likeEvents []LikeEvent) ([]uint64, error) {
+	// Put param checking here?
 	matchMap := make(map[string][]LikeEvent)
 	var matchSequenceNumbers []uint64
 
@@ -116,27 +196,28 @@ func FindMatchEvents(likeEvents []LikeEvent) ([]uint64, error) {
 			matchMap[event.FromUserId] = append(matchMap[event.FromUserId], event)
 		}
 	}
-	matchSequenceNumbers = filterDups(matchSequenceNumbers)
+	// matchSequenceNumbers = filterDups(matchSequenceNumbers)
 	return matchSequenceNumbers, nil
 }
 
-func filterDups(input []uint64) []uint64 {
-	inputMap := make(map[uint64]bool)
-	var results []uint64
-	for _, i := range input {
-		if _, found := inputMap[i]; !found {
-			inputMap[i] = true
-			results = append(results, i)
-		}
-	}
-	return results
-}
+// func filterDups(input []uint64) []uint64 {
+// 	inputMap := make(map[uint64]bool)
+// 	var results []uint64
+// 	for _, i := range input {
+// 		if _, found := inputMap[i]; !found {
+// 			inputMap[i] = true
+// 			results = append(results, i)
+// 		}
+// 	}
+// 	return results
+// }
 
 func SendMatchEvents(matchSequenceNumbers []uint64, protocol string, eventListenerURL string, port uint) error {
 	// Put param checking here
+	fmt.Println("Connecting to EVENT LISTENER...")
 	eventListenerConnection, err := net.Dial(protocol, fmt.Sprintf("%s:%d", eventListenerURL, port));
 	if err != nil {
-		fmt.Println("Error connecting to EVENT LISTENER:", err.Error())
+		fmt.Println("Error while connecting to EVENT LISTENER.")
 		return err
 	}
 	defer eventListenerConnection.Close()
@@ -146,16 +227,22 @@ func SendMatchEvents(matchSequenceNumbers []uint64, protocol string, eventListen
 	for scanner.Scan() && scanner.Text() != "MATCH BEGIN" {
 		fmt.Println("Waiting for EVENT LISTINER to be ready...")
 	}
+	fmt.Println("MATCH BEGIN")
 
 	for _, sequenceNumber := range matchSequenceNumbers {
-		fmt.Printf("Sending: %d\n", sequenceNumber);
-		eventListenerConnection.Write([]byte(fmt.Sprintf("%d\n", sequenceNumber)))
+		_, err := eventListenerConnection.Write([]byte(fmt.Sprintf("%d\n", sequenceNumber)))
+		if err != nil {
+			fmt.Printf("Failed while sending sequence number: %d", sequenceNumber)
+			return err
+		}
 	}
 
+	// Scan for success or failure message from the EVENT LISTENER.
 	matchEndMessage := "Unknown"
 	for scanner.Scan() {
 		matchEndMessage = scanner.Text()
 	}
 	fmt.Println(matchEndMessage)
+
 	return nil
 }
