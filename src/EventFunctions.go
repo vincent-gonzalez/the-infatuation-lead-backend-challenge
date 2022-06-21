@@ -49,60 +49,75 @@ func GetLikeEvents(eventSourceConnection net.Conn) ([]LikeEvent, error) {
 		} else {
 			messageParts := strings.Split(message, "|")
 
-			if messageParts[1] == "LIKE_LIKED" {
-				sequenceNum, err := strconv.ParseUint(messageParts[0], 10, 64)
-				if err != nil {
-					fmt.Println("Sequence Num not number: ", err.Error())
-				}
+			// if messageParts[1] == "LIKE_LIKED" {
+			// 	sequenceNum, err := strconv.ParseUint(messageParts[0], 10, 64)
+			// 	if err != nil {
+			// 		fmt.Println("Sequence Num not number: ", err.Error())
+			// 	}
 
-				newLikeEvent := LikeEvent{
-					SequenceNum: sequenceNum,
-					LikeType: messageParts[1],
-					FromUserId: messageParts[2],
-					ToUserId: messageParts[3],
-				}
-				likeEvents = append(likeEvents, newLikeEvent)
+			// 	newLikeEvent := LikeEvent{
+			// 		SequenceNum: sequenceNum,
+			// 		LikeType: messageParts[1],
+			// 		FromUserId: messageParts[2],
+			// 		ToUserId: messageParts[3],
+			// 	}
+			// 	likeEvents = append(likeEvents, newLikeEvent)
+			// }
+			sequenceNum, err := strconv.ParseUint(messageParts[0], 10, 64)
+			if err != nil {
+				fmt.Println("Sequence Num not number: ", err.Error())
 			}
+
+			newLikeEvent := LikeEvent{
+				SequenceNum: sequenceNum,
+				LikeType: messageParts[1],
+				FromUserId: messageParts[2],
+				ToUserId: messageParts[3],
+			}
+			likeEvents = append(likeEvents, newLikeEvent)
 		}
 	}
 
 	return likeEvents, nil
 }
 
-func FindMatchEvents(likeEvents []LikeEvent) ([]uint64, []string, error) {
+func FindMatchEvents(likeEvents []LikeEvent) ([]uint64, error) {
 	matchMap := make(map[string][]LikeEvent)
 	var matchSequenceNumbers []uint64
-	var matchInfo []string
+
 	for _, event := range likeEvents {
-		if eventList, found := matchMap[event.ToUserId]; found {
-			var matchingEvent LikeEvent
-			var matchSequenceNum uint64
-			foundMatchingEvent := false
+		if event.LikeType == "LIKE_LIKED" {
+			if eventList, found := matchMap[event.ToUserId]; found {
+				var matchingEvent LikeEvent
+				var matchSequenceNum uint64
+				foundMatchingEvent := false
 
-			for _, m := range eventList {
-				if m.ToUserId == event.FromUserId {
-					matchingEvent = m
-					foundMatchingEvent = true
-					break
+				for _, m := range eventList {
+					if m.ToUserId == event.FromUserId {
+						matchingEvent = m
+						foundMatchingEvent = true
+						break
+					}
+				}
+
+				if foundMatchingEvent {
+					if matchingEvent.SequenceNum > event.SequenceNum {
+						matchSequenceNum = matchingEvent.SequenceNum
+					} else {
+						matchSequenceNum = event.SequenceNum
+					}
+
+					matchSequenceNumbers = append(matchSequenceNumbers, matchSequenceNum)
 				}
 			}
-
-			if foundMatchingEvent {
-				if matchingEvent.SequenceNum > event.SequenceNum {
-					matchSequenceNum = matchingEvent.SequenceNum
-				} else {
-					matchSequenceNum = event.SequenceNum
-				}
-				matchInfo = append(matchInfo, fmt.Sprintf("SequenceNum: %d From: %s To: %s\n", matchingEvent.SequenceNum, matchingEvent.FromUserId, matchingEvent.ToUserId))
-				matchInfo = append(matchInfo, fmt.Sprintf("SequenceNum: %d From: %s To: %s\n", event.SequenceNum, event.FromUserId, event.ToUserId))
-				matchSequenceNumbers = append(matchSequenceNumbers, matchSequenceNum)
-			}
-		} else {
+			// else {
+			// 	matchMap[event.FromUserId] = append(matchMap[event.FromUserId], event)
+			// }
 			matchMap[event.FromUserId] = append(matchMap[event.FromUserId], event)
 		}
 	}
 	matchSequenceNumbers = filterDups(matchSequenceNumbers)
-	return matchSequenceNumbers, matchInfo, nil
+	return matchSequenceNumbers, nil
 }
 
 func filterDups(input []uint64) []uint64 {
@@ -126,67 +141,17 @@ func SendMatchEvents(matchSequenceNumbers []uint64, protocol string, eventListen
 	}
 	defer eventListenerConnection.Close()
 
-	// isServerReadyForMatches := false
-	// isAllEventsReceived := false
 	scanner := bufio.NewScanner(eventListenerConnection)
-	//writer := bufio.NewWriter(eventListenerConnection)
-	// for !isServerReadyForMatches {
-	// 	message, err := reader.ReadString('\n')
-	// 	fmt.Println(message);
-	// 	if err != nil {
-	// 		fmt.Println("Failed while waiting for EVENT LISTENER to be ready:", err.Error())
-	// 		return err
-	// 	}
-	// 	if message == "MATCH BEGIN" {
-	// 		isServerReadyForMatches = true;
-	// 	}
-	// }
+
 	for scanner.Scan() && scanner.Text() != "MATCH BEGIN" {
 		fmt.Println("Waiting for EVENT LISTINER to be ready...")
 	}
 
-	// reader := bufio.NewReader(eventListenerConnection)
-	// isSendSuccess := false
-	// randSource := rand.NewSource(time.Now().UnixNano())
-	// randomizer := rand.New(randSource)
-	// randomDelay := 0
-	// for !isSendSuccess {
-	// 	for _, sequenceNumber := range matchSequenceNumbers {
-	// 		fmt.Printf("Sending: %d\n", sequenceNumber);
-	// 		eventListenerConnection.Write([]byte(fmt.Sprintf("%d\n", sequenceNumber)))
-	// 	}
-
-	// 	message, err := reader.ReadString('\n')
-	// 	if err != nil {
-	// 		fmt.Println("Error reading event:", err.Error())
-	// 	}
-	// 	message = message[:len(message)-1]
-
-	// 	if message == "MATCH END - OK" {
-	// 		isSendSuccess = true
-	// 		fmt.Println(message)
-	// 	} else {
-	// 		fmt.Println(message)
-	// 		randomDelay += randomizer.Intn(100)
-	// 		time.Sleep((1000 * time.Millisecond) + time.Duration(randomDelay))
-	// 	}
-	// }
 	for _, sequenceNumber := range matchSequenceNumbers {
 		fmt.Printf("Sending: %d\n", sequenceNumber);
 		eventListenerConnection.Write([]byte(fmt.Sprintf("%d\n", sequenceNumber)))
 	}
 
-	// for !isAllEventsReceived {
-	// 	message, err := reader.ReadString('\n')
-	// 	if err != nil {
-	// 		fmt.Println("Failed while waiting for EVENT LISTENER to confirm all events received:", err.Error())
-	// 		return err
-	// 	}
-	// 	if message == "MATCH END - OK" || message == "MATCH END - ERROR" {
-	// 		isAllEventsReceived = true;
-	// 		fmt.Println(message);
-	// 	}
-	// }
 	matchEndMessage := "Unknown"
 	for scanner.Scan() {
 		matchEndMessage = scanner.Text()
