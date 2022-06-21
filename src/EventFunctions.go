@@ -8,69 +8,21 @@ import (
 	"strings"
 )
 
-// func ReceiveEventsOLD(protocol string, eventSourceURL string, port uint) ([]LikeEvent, error) {
-// 	// Put param checking here
-// 	fmt.Println("Connecting to EVENT SOURCE...")
-// 	eventSourceConnection, err := net.Dial(protocol, fmt.Sprintf("%s:%d", eventSourceURL, port));
-// 	if err != nil {
-// 		fmt.Println("Error connecting to EVENT SOURCE:", err.Error())
-// 		return nil, err
-// 	}
-// 	defer eventSourceConnection.Close()
-
-// 	events, err := GetLikeEvents(eventSourceConnection);
-// 	if err != nil {
-// 		fmt.Println(err.Error())
-// 		return nil, err
-// 	}
-// 	fmt.Println("All messages received.");
-// 	fmt.Println("Connection to EVENT SOURCE closed.");
-
-// 	return events, nil
-// }
-
 func ReceiveEvents(protocol string, eventSourceURL string, port uint) ([]LikeEvent, error) {
+	var likeEvents []LikeEvent
+	// these magic constants should be defined in the environment
+	const dataDelimiter = "|"
+	const numberOfEventFields = 4
+
 	fmt.Println("Connecting to EVENT SOURCE...")
-	eventSourceConnection, err := net.Dial(protocol, fmt.Sprintf("%s:%d", eventSourceURL, port));
+	eventSourceConnection, err := net.Dial(protocol, fmt.Sprintf("%s:%d", eventSourceURL, port))
 	if err != nil {
 		fmt.Println("Error connecting to EVENT SOURCE:", err.Error())
 		return nil, err
 	}
 	defer eventSourceConnection.Close()
 
-	// var likeEvents []LikeEvent
 	scanner := bufio.NewScanner(eventSourceConnection)
-	// for scanner.Scan() {
-	// 	message := scanner.Text()
-	// 	if message == "EVENT BEGIN" {
-	// 		fmt.Println(message)
-	// 	} else if message == "EVENT END" {
-	// 		fmt.Println(message)
-	// 		break
-	// 	} else {
-	// 		messageParts := strings.Split(message, "|")
-	// 		sequenceNum, err := strconv.ParseUint(messageParts[0], 10, 64)
-	// 		if err != nil {
-	// 			fmt.Println("Sequence Num not number: ", err.Error())
-	// 		}
-
-	// 		newLikeEvent := LikeEvent{
-	// 			SequenceNum: sequenceNum,
-	// 			LikeType: messageParts[1],
-	// 			FromUserId: messageParts[2],
-	// 			ToUserId: messageParts[3],
-	// 		}
-
-	// 		likeEvents = append(likeEvents, newLikeEvent)
-	// 	}
-	// }
-	likeEvents, _ := ParseEvents(scanner)
-
-	return likeEvents, nil
-}
-
-func ParseEvents(scanner *bufio.Scanner) ([]LikeEvent, error) {
-	var likeEvents []LikeEvent
 
 	// wait for EVENT SOURCE to send start message
 	for scanner.Scan() && scanner.Text() != "EVENT BEGIN" {
@@ -85,83 +37,97 @@ func ParseEvents(scanner *bufio.Scanner) ([]LikeEvent, error) {
 			fmt.Println(message)
 			break
 		} else {
-			messageParts := strings.Split(message, "|")
-			sequenceNum, err := strconv.ParseUint(messageParts[0], 10, 64)
+			newLikeEvent, err := ParseEvent(message, dataDelimiter, numberOfEventFields)
 			if err != nil {
-				fmt.Println("Input sequence number is not a number: ", err.Error())
+				fmt.Println("Failed to parse event message.")
+				// in a simple case, dropping the record is fine, but in a real
+				// world scenario, this may not be acceptable and should be handled.
+				continue
 			}
 
-			newLikeEvent := LikeEvent{
-				SequenceNum: sequenceNum,
-				LikeType: messageParts[1],
-				FromUserId: messageParts[2],
-				ToUserId: messageParts[3],
-			}
-
-			likeEvents = append(likeEvents, newLikeEvent)
+			likeEvents = append(likeEvents, *newLikeEvent)
 		}
 	}
+	//likeEvents, _ := ParseEvents(scanner, "|")
 
 	return likeEvents, nil
 }
 
-// func GetLikeEvents(eventSourceConnection net.Conn) ([]LikeEvent, error) {
-// 	reader := bufio.NewReader(eventSourceConnection)
-// 	isAllEventsReceived := false
+// func ParseEvents(scanner *bufio.Scanner, dataDelimiter string) ([]LikeEvent, error) {
 // 	var likeEvents []LikeEvent
 
-// 	for !isAllEventsReceived {
-// 		message, err := reader.ReadString('\n')
-// 		if err != nil {
-// 			fmt.Println("Error reading event:", err.Error())
-// 		}
-// 		message = message[:len(message)-1]
+// 	// wait for EVENT SOURCE to send start message
+// 	for scanner.Scan() && scanner.Text() != "EVENT BEGIN" {
+// 		fmt.Println("Waiting for EVENT SOURCE to send events...")
+// 	}
+// 	fmt.Println("EVENT BEGIN")
 
-// 		if message == "EVENT BEGIN" {
-// 			// START receiving events...
+// 	for scanner.Scan() {
+// 		message := scanner.Text()
+
+// 		if message == "EVENT END" {
 // 			fmt.Println(message)
-// 			continue
-// 		} else if message == "EVENT END" {
-// 			// END receiving events...
-// 			fmt.Println(message)
-// 			isAllEventsReceived = true
+// 			break
 // 		} else {
-// 			messageParts := strings.Split(message, "|")
-
-// 			// if messageParts[1] == "LIKE_LIKED" {
-// 			// 	sequenceNum, err := strconv.ParseUint(messageParts[0], 10, 64)
-// 			// 	if err != nil {
-// 			// 		fmt.Println("Sequence Num not number: ", err.Error())
-// 			// 	}
-
-// 			// 	newLikeEvent := LikeEvent{
-// 			// 		SequenceNum: sequenceNum,
-// 			// 		LikeType: messageParts[1],
-// 			// 		FromUserId: messageParts[2],
-// 			// 		ToUserId: messageParts[3],
-// 			// 	}
-// 			// 	likeEvents = append(likeEvents, newLikeEvent)
+// 			// messageParts := strings.Split(message, dataDelimiter)
+// 			// sequenceNum, err := strconv.ParseUint(messageParts[0], 10, 64)
+// 			// if err != nil {
+// 			// 	fmt.Println("Input sequence number is not a number: ", err.Error())
+// 			// 	// if sequence number is malformed, we can't parse it correctly.
+// 			// 	// we can't eventually find matches without a sequence number.
+// 			// 	// in a simple case, dropping the record is fine, but in a real
+// 			// 	// world scenario, this may not be acceptable and should be handled.
+// 			// 	continue
 // 			// }
-// 			sequenceNum, err := strconv.ParseUint(messageParts[0], 10, 64)
+
+// 			// newLikeEvent := LikeEvent{
+// 			// 	SequenceNum: sequenceNum,
+// 			// 	LikeType:    messageParts[1],
+// 			// 	FromUserId:  messageParts[2],
+// 			// 	ToUserId:    messageParts[3],
+// 			// }
+// 			newLikeEvent, err := ParseEvent(message, dataDelimiter)
 // 			if err != nil {
-// 				fmt.Println("Sequence Num not number: ", err.Error())
+// 				fmt.Println("Failed to parse event message.")
+// 				// in a simple case, dropping the record is fine, but in a real
+// 				// world scenario, this may not be acceptable and should be handled.
+// 				continue
 // 			}
 
-// 			newLikeEvent := LikeEvent{
-// 				SequenceNum: sequenceNum,
-// 				LikeType: messageParts[1],
-// 				FromUserId: messageParts[2],
-// 				ToUserId: messageParts[3],
-// 			}
-// 			likeEvents = append(likeEvents, newLikeEvent)
+// 			likeEvents = append(likeEvents, *newLikeEvent)
 // 		}
 // 	}
 
 // 	return likeEvents, nil
 // }
 
+func ParseEvent(eventMessage, dataDelimiter string, numberOfFields int) (*LikeEvent, error) {
+	messageParts := strings.Split(eventMessage, dataDelimiter)
+	if len(messageParts) < numberOfFields {
+		return nil, fmt.Errorf("Cannot parse fields from message.")
+	}
+
+	sequenceNum, err := strconv.ParseUint(messageParts[0], 10, 64)
+	if err != nil {
+		fmt.Println("Input sequence number is not a number: ", err.Error())
+		// if sequence number is malformed, we can't parse it correctly.
+		// we can't eventually find matches without a sequence number.
+		return nil, err
+	}
+
+	return &LikeEvent{
+		SequenceNum: sequenceNum,
+		LikeType:    messageParts[1],
+		FromUserId:  messageParts[2],
+		ToUserId:    messageParts[3],
+	}, nil
+}
+
 func FindMatchEvents(likeEvents []LikeEvent) ([]uint64, error) {
-	// Put param checking here?
+	if len(likeEvents) < 1 {
+		return nil, fmt.Errorf("likeEvents: slice cannot be empty. len(likeEvents): %d", len(likeEvents))
+	}
+
 	matchMap := make(map[string][]LikeEvent)
 	var matchSequenceNumbers []uint64
 
@@ -190,32 +156,21 @@ func FindMatchEvents(likeEvents []LikeEvent) ([]uint64, error) {
 					matchSequenceNumbers = append(matchSequenceNumbers, matchSequenceNum)
 				}
 			}
-			// else {
-			// 	matchMap[event.FromUserId] = append(matchMap[event.FromUserId], event)
-			// }
+
 			matchMap[event.FromUserId] = append(matchMap[event.FromUserId], event)
 		}
 	}
-	// matchSequenceNumbers = filterDups(matchSequenceNumbers)
+
 	return matchSequenceNumbers, nil
 }
 
-// func filterDups(input []uint64) []uint64 {
-// 	inputMap := make(map[uint64]bool)
-// 	var results []uint64
-// 	for _, i := range input {
-// 		if _, found := inputMap[i]; !found {
-// 			inputMap[i] = true
-// 			results = append(results, i)
-// 		}
-// 	}
-// 	return results
-// }
-
 func SendMatchEvents(matchSequenceNumbers []uint64, protocol string, eventListenerURL string, port uint) error {
-	// Put param checking here
+	if len(matchSequenceNumbers) < 1 {
+		return fmt.Errorf("matchSequenceNumbers: slice cannot be empty. len(matchSequenceNumbers): %d", len(matchSequenceNumbers))
+	}
+
 	fmt.Println("Connecting to EVENT LISTENER...")
-	eventListenerConnection, err := net.Dial(protocol, fmt.Sprintf("%s:%d", eventListenerURL, port));
+	eventListenerConnection, err := net.Dial(protocol, fmt.Sprintf("%s:%d", eventListenerURL, port))
 	if err != nil {
 		fmt.Println("Error while connecting to EVENT LISTENER.")
 		return err
