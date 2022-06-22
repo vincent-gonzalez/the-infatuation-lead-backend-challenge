@@ -3,7 +3,7 @@
 ## How to run
 A makefile has been included in the base directory. Use `make buildRun` to build and execute the program. Use `make run` to simply run the program after it has already been compiled.
 
-As a courtesy, a compiled binary has been provided as a part of this repo. So, you may use the `make run` command to immediately execute the solution program.
+As a courtesy, a compiled binary has been provided as a part of this repo. So, you may use the `make run` command to immediately execute the solution program. If the binary file gives you trouble, feel free to build the program from this repo using the `make build` command.
 
 ## Design
 The basic algorithm of the program flows as follows:
@@ -30,18 +30,50 @@ The basic algorithm of the program flows as follows:
     4. Wait and listen for the EVENT LISTENER to send either the MATCH END - OK or MATCH END - ERROR message.
 6. Exit the application.
 
+## Thoughts on improvements in future iterations
+### Enumerated types
+A helpful improvement would be to use enumeration types instead of hard-coded strings for things like *EVENT BEGIN* and *LIKE_LIKED*. Go's support of enumerations is different from a language like C#, and is less helpful when it comes to string enumerations as the type checking is not as strict with string enumerations in Go. Constants could be a middle ground in the meantime.
+### Concurrency
 ## Files
 ### main.go
-The main program logic originates here.
+The main program logic originates here. The
 
 ### EventFunctions.go
-o
+Contains functions that operate on each event.
 
 ### EventFunctions_test.go
-o
+Contains unit tests for the event functions.
 
 ### LikeEvent.go
-o
+Contains the data type that represents the like events sent from the EVENT SOURCE.
+There are 4 fields:
+- SequenceNum `uint64` - contains the sequence number of the message. Values from the message will likely need to be converted from `string` to `uint64`.
+- LikeType `string` - contains the like type of a message
+- FromUserId `string` - contains the user ID of the user sending the like
+- ToUserId `string` - contains the user ID of the user that is receiving the like.
+
+#### Thoughts behind the SequenceNum typing
+Negative numbers don't make sense on an identifier field like SequenceNum. It is also possible that tens of thousands of event messages can be generated, so a large variable type is required to hold larger sequence number values. In addition, while the sequence number could be typed as a `string`, the natural type of a sequence number is an integer.
+
+#### Thoughts behind the FromUserId and ToUserId typing
+There is a trade-off to using strings for the user IDs instead of integers. Strings allow user IDs to be something other than numbers
+such as a GUID, hash value, email address, or user handle. However, based on
+the example input, the natural type of the ID is a positive integer.
+If mathematical operations are to be supported on the user IDs, then
+an unsigned integer type makes sense. From a security standpoint,
+integer values may allow a type of user enumeration to take place
+should an attacker gain access to the values. A pattern such as
+when a user joined may emerge as, for example, older users would
+be assigned a user ID number that is closer to zero. This could
+have the unwanted situation of identifying administrator users as
+they have a higher chance of entering the system at an earlier date
+than other users.
 
 ### Makefile
-o
+Contains the CLI commands for the project. It also contains some environment variables that are used within the CLI commands.
+
+The file includes the following commands:
+- `build` - changes to the source directory, compiles the program, and places the executable into a build directory.
+- `buildRun` - combines the `build` and `run` commands into one.
+- `run` - executes the compiled program.
+- `test` - executes the unit tests in the project.
