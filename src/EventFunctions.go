@@ -10,7 +10,7 @@ import (
 
 func ReceiveEvents(protocol string, eventSourceURL string, port uint) ([]LikeEvent, error) {
 	var likeEvents []LikeEvent
-	// TODO - these magic constants should be defined in the environment
+	// TODO - these magic constants should be defined in the environment configuration
 	const dataDelimiter = "|"
 	const numberOfEventFields = 4
 
@@ -50,7 +50,6 @@ func ReceiveEvents(protocol string, eventSourceURL string, port uint) ([]LikeEve
 			likeEvents = append(likeEvents, *newLikeEvent)
 		}
 	}
-	//likeEvents, _ := ParseEvents(scanner, "|")
 
 	return likeEvents, nil
 }
