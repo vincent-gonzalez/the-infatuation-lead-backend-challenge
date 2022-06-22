@@ -16,6 +16,7 @@ func main() {
 		fmt.Println("Exiting application.")
 		os.Exit(1)
 	}
+	defer eventSourceConnection.Close()
 
 	likeEvents, err := ReceiveEvents(eventSourceConnection)
 	if err != nil {
@@ -38,14 +39,26 @@ func main() {
 	matchSequenceNumbers, err := FindMatchEvents(likeEvents)
 	if err != nil {
 		fmt.Printf("Failed while finding match events: %v\n", err.Error())
+		fmt.Println("Exiting application.")
+		os.Exit(1)
 	}
 
 	if len(matchSequenceNumbers) < 1 {
 		fmt.Println("No matches found.")
 	} else {
-		matchStatus, err := SendMatchEvents(matchSequenceNumbers, "tcp", "localhost", 9099)
+		fmt.Println("Connecting to EVENT LISTENER...")
+		eventListenerConnection, err := CreateConnection("tcp", "localhost", 9099)
+		if err != nil {
+			fmt.Printf("Error while connecting to EVENT LISTENER: %v\n", err.Error())
+			fmt.Println("Exiting application.")
+			os.Exit(1)
+		}
+		defer eventListenerConnection.Close()
+
+		matchStatus, err := SendMatchEvents(eventListenerConnection, matchSequenceNumbers)
 		if err != nil {
 			fmt.Printf("Failed while sending match events: %v", err.Error())
+			fmt.Println("Exiting application.")
 			os.Exit(1)
 		}
 
