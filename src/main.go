@@ -9,12 +9,20 @@ import (
 func main() {
 	fmt.Println("Starting application...");
 
-	likeEvents, err := ReceiveEvents("tcp", "localhost", 9090)
+	fmt.Println("Connecting to EVENT SOURCE...")
+	eventSourceConnection, err := CreateConnection("tcp", "localhost", 9090)
+	if err != nil {
+		fmt.Printf("Error while connecting to EVENT SOURCE: %v\n", err.Error())
+		fmt.Println("Exiting application.")
+		os.Exit(1)
+	}
+
+	likeEvents, err := ReceiveEvents(eventSourceConnection)
 	if err != nil {
 		// exit here. we can't process further without a list of valid events
 		// TODO - we could make a new request to the server to attempt to get
 		// the events again.
-		fmt.Printf("Failed while receive events: %v\n", err.Error())
+		fmt.Printf("Failed while receiving events: %v\n", err.Error())
 		os.Exit(1)
 	}
 

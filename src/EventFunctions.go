@@ -8,18 +8,18 @@ import (
 	"strings"
 )
 
-func ReceiveEvents(protocol string, eventSourceURL string, port uint) ([]LikeEvent, error) {
+func ReceiveEvents(eventSourceConnection net.Conn) ([]LikeEvent, error) {
 	var likeEvents []LikeEvent
 	// TODO - these magic constants should be defined in the environment configuration
 	const dataDelimiter = "|"
 	const numberOfEventFields = 4
 
-	fmt.Println("Connecting to EVENT SOURCE...")
-	eventSourceConnection, err := net.Dial(protocol, fmt.Sprintf("%s:%d", eventSourceURL, port))
-	if err != nil {
-		fmt.Println("Error connecting to EVENT SOURCE:", err.Error())
-		return nil, err
-	}
+	// fmt.Println("Connecting to EVENT SOURCE...")
+	// eventSourceConnection, err := net.Dial(protocol, fmt.Sprintf("%s:%d", eventSourceURL, port))
+	// if err != nil {
+	// 	fmt.Println("Error connecting to EVENT SOURCE:", err.Error())
+	// 	return nil, err
+	// }
 	defer eventSourceConnection.Close()
 
 	scanner := bufio.NewScanner(eventSourceConnection)
@@ -157,5 +157,10 @@ func SendMatchEvents(matchSequenceNumbers []uint64, protocol string, eventListen
 	return matchEndMessage, nil
 }
 
-	return nil
+func CreateConnection(protocol string, url string, port uint) (net.Conn, error) {
+	newConnection, err := net.Dial(protocol, fmt.Sprintf("%s:%d", url, port))
+	if err != nil {
+		return nil, err
+	}
+	return newConnection, err
 }
