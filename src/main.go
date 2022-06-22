@@ -43,11 +43,14 @@ func main() {
 	if len(matchSequenceNumbers) < 1 {
 		fmt.Println("No matches found.")
 	} else {
-		err := SendMatchEvents(matchSequenceNumbers, "tcp", "localhost", 9099)
+		matchStatus, err := SendMatchEvents(matchSequenceNumbers, "tcp", "localhost", 9099)
 		if err != nil {
 			fmt.Printf("Failed while sending match events: %v", err.Error())
 			os.Exit(1)
 		}
+
+		// Display if all matches received in order or not.
+		fmt.Println(matchStatus)
 	}
 
 	fmt.Println("Exiting application.");
