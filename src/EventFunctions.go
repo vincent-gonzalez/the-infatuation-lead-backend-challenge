@@ -10,7 +10,7 @@ import (
 
 func ReceiveEvents(protocol string, eventSourceURL string, port uint) ([]LikeEvent, error) {
 	var likeEvents []LikeEvent
-	// these magic constants should be defined in the environment
+	// TODO - these magic constants should be defined in the environment
 	const dataDelimiter = "|"
 	const numberOfEventFields = 4
 
@@ -29,10 +29,12 @@ func ReceiveEvents(protocol string, eventSourceURL string, port uint) ([]LikeEve
 		fmt.Println("Waiting for EVENT SOURCE to send events...")
 	}
 	fmt.Println("EVENT BEGIN")
+	fmt.Println("Receiving events...")
 
 	for scanner.Scan() {
 		message := scanner.Text()
 
+		// EVENT SOURCE has finished sending messages
 		if message == "EVENT END" {
 			fmt.Println(message)
 			break
@@ -56,7 +58,7 @@ func ReceiveEvents(protocol string, eventSourceURL string, port uint) ([]LikeEve
 func ParseEvent(eventMessage, dataDelimiter string, numberOfFields int) (*LikeEvent, error) {
 	messageParts := strings.Split(eventMessage, dataDelimiter)
 	if len(messageParts) < numberOfFields {
-		return nil, fmt.Errorf("Cannot parse fields from message.")
+		return nil, fmt.Errorf("cannot parse fields from message")
 	}
 
 	sequenceNum, err := strconv.ParseUint(messageParts[0], 10, 64)
@@ -135,6 +137,7 @@ func SendMatchEvents(matchSequenceNumbers []uint64, protocol string, eventListen
 		fmt.Println("Waiting for EVENT LISTINER to be ready...")
 	}
 	fmt.Println("MATCH BEGIN")
+	fmt.Println("Sending match events...")
 
 	for _, sequenceNumber := range matchSequenceNumbers {
 		_, err := eventListenerConnection.Write([]byte(fmt.Sprintf("%d\n", sequenceNumber)))
@@ -143,6 +146,8 @@ func SendMatchEvents(matchSequenceNumbers []uint64, protocol string, eventListen
 			return err
 		}
 	}
+
+	fmt.Println("All match events sent.")
 
 	// Scan for success or failure message from the EVENT LISTENER.
 	matchEndMessage := "Unknown"
