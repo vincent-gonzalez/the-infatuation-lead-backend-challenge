@@ -1,10 +1,10 @@
 package main
 
 import (
-	// "fmt"
 	"testing"
 )
 
+// Test that a valid message is parsed correctly.
 func TestParseEvent(t *testing.T) {
 	testEvent := "5|LIKE_LIKED|300|100"
 
@@ -20,7 +20,18 @@ func TestParseEvent(t *testing.T) {
 		t.Errorf("Expected %v but got %v", want, got)
 	}
 }
+// Test that a malformed message is not parsed.
+func TestParseEventBadEvent (t *testing.T) {
+	testEvent := "5,LIKE_LIKED,300,100"
 
+	got, err := ParseEvent(testEvent, "|", 4)
+
+	if got != nil && err != nil {
+		t.Errorf("Expected nil and err != nil but got %v", got)
+	}
+}
+
+// Test that matches are found with known good input that contains match events.
 func TestFindMatchEvents(t *testing.T) {
 	testMatches := []LikeEvent {
 		{
@@ -73,11 +84,9 @@ func TestFindMatchEvents(t *testing.T) {
 	if !testSlicesAreEqual(want, got) {
 		t.Errorf("Expected %v, but got %v\n", want, got);
 	}
-	//  else {
-	// 	fmt.Printf("Expected %v and got %v\n", want, got);
-	// }
 }
 
+// Test that match events are not found when the input is known to not have match events.
 func TestNoMatchEventsFound(t *testing.T) {
 	matches := []LikeEvent {
 		{
@@ -125,13 +134,13 @@ func TestNoMatchEventsFound(t *testing.T) {
 	}
 
 	got, _ := FindMatchEvents(matches)
-	// want := []uint{}
 
 	if len(got) != 0 {
 		t.Errorf("Expected length of matches to be zero. Got: %d", len(got))
 	}
 }
 
+// Helper function for uint64 slices.
 func testSlicesAreEqual(a, b []uint64) bool {
 	if len(a) != len(b) {
 		return false;
