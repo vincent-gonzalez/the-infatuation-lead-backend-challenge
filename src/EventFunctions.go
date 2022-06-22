@@ -117,16 +117,16 @@ func FindMatchEvents(likeEvents []LikeEvent) ([]uint64, error) {
 	return matchSequenceNumbers, nil
 }
 
-func SendMatchEvents(matchSequenceNumbers []uint64, protocol string, eventListenerURL string, port uint) error {
+func SendMatchEvents(matchSequenceNumbers []uint64, protocol string, eventListenerURL string, port uint) (string, error) {
 	if len(matchSequenceNumbers) < 1 {
-		return fmt.Errorf("matchSequenceNumbers: slice cannot be empty. len(matchSequenceNumbers): %d", len(matchSequenceNumbers))
+		return "", fmt.Errorf("matchSequenceNumbers: slice cannot be empty. len(matchSequenceNumbers): %d", len(matchSequenceNumbers))
 	}
 
 	fmt.Println("Connecting to EVENT LISTENER...")
 	eventListenerConnection, err := net.Dial(protocol, fmt.Sprintf("%s:%d", eventListenerURL, port))
 	if err != nil {
 		fmt.Println("Error while connecting to EVENT LISTENER.")
-		return err
+		return "", err
 	}
 	defer eventListenerConnection.Close()
 
@@ -142,7 +142,7 @@ func SendMatchEvents(matchSequenceNumbers []uint64, protocol string, eventListen
 		_, err := eventListenerConnection.Write([]byte(fmt.Sprintf("%d\n", sequenceNumber)))
 		if err != nil {
 			fmt.Printf("Failed while sending sequence number: %d", sequenceNumber)
-			return err
+			return "", err
 		}
 	}
 
@@ -153,7 +153,9 @@ func SendMatchEvents(matchSequenceNumbers []uint64, protocol string, eventListen
 	for scanner.Scan() {
 		matchEndMessage = scanner.Text()
 	}
-	fmt.Println(matchEndMessage)
+
+	return matchEndMessage, nil
+}
 
 	return nil
 }
