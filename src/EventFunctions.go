@@ -14,16 +14,7 @@ func ReceiveEvents(eventSourceConnection net.Conn) ([]LikeEvent, error) {
 	const dataDelimiter = "|"
 	const numberOfEventFields = 4
 
-	// fmt.Println("Connecting to EVENT SOURCE...")
-	// eventSourceConnection, err := net.Dial(protocol, fmt.Sprintf("%s:%d", eventSourceURL, port))
-	// if err != nil {
-	// 	fmt.Println("Error connecting to EVENT SOURCE:", err.Error())
-	// 	return nil, err
-	// }
-	defer eventSourceConnection.Close()
-
 	scanner := bufio.NewScanner(eventSourceConnection)
-
 	// wait for EVENT SOURCE to send start message
 	for scanner.Scan() && scanner.Text() != "EVENT BEGIN" {
 		fmt.Println("Waiting for EVENT SOURCE to send events...")
@@ -117,21 +108,12 @@ func FindMatchEvents(likeEvents []LikeEvent) ([]uint64, error) {
 	return matchSequenceNumbers, nil
 }
 
-func SendMatchEvents(matchSequenceNumbers []uint64, protocol string, eventListenerURL string, port uint) (string, error) {
+func SendMatchEvents(eventListenerConnection net.Conn, matchSequenceNumbers []uint64) (string, error) {
 	if len(matchSequenceNumbers) < 1 {
 		return "", fmt.Errorf("matchSequenceNumbers: slice cannot be empty. len(matchSequenceNumbers): %d", len(matchSequenceNumbers))
 	}
 
-	fmt.Println("Connecting to EVENT LISTENER...")
-	eventListenerConnection, err := net.Dial(protocol, fmt.Sprintf("%s:%d", eventListenerURL, port))
-	if err != nil {
-		fmt.Println("Error while connecting to EVENT LISTENER.")
-		return "", err
-	}
-	defer eventListenerConnection.Close()
-
 	scanner := bufio.NewScanner(eventListenerConnection)
-
 	for scanner.Scan() && scanner.Text() != "MATCH BEGIN" {
 		fmt.Println("Waiting for EVENT LISTINER to be ready...")
 	}
