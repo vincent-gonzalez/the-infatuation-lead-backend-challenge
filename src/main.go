@@ -10,6 +10,7 @@ func main() {
 	fmt.Println("Starting application...");
 
 	fmt.Println("Connecting to EVENT SOURCE...")
+	// TODO - the protocol, url, and port values should come from a config or environment variable.
 	eventSourceConnection, err := CreateConnection("tcp", "localhost", 9090)
 	if err != nil {
 		fmt.Printf("Error while connecting to EVENT SOURCE: %v\n", err.Error())
