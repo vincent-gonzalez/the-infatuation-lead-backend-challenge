@@ -4,11 +4,11 @@
 The minimum version of Go that is required to run this solution is `1.15`. This version is also defined in the `go.mod` file of this solution. However, I have compiled and run this solution using version `1.17.11` of Go.
 
 ## How to run
-A makefile has been included in the base directory. Use `make buildRun` to build and execute the program. Use `make run` to simply run the program after it has already been compiled.
-
-As a courtesy, a compiled binary file of this solution has been provided as a part of this repo. So, you may use the `make run` command to immediately execute the solution program. If the binary file gives you trouble, feel free to build the program from this repo using the `make build` command.
+A makefile has been included in the base directory. Use `make buildRun` in a terminal in the base directory to build and execute the program. Use `make build` to only compile the program. Use `make run` to run the program after it has already been compiled.
 
 ## Design
+The solution program is a console application designed to run in a terminal.
+
 The basic algorithm of the program flows as follows:
 1. Connect to the EVENT SOURCE server over TCP on localhost:9090.
 2. Receive the event messages that the EVENT SOURCE sends.
@@ -32,6 +32,9 @@ The basic algorithm of the program flows as follows:
     3. Iterate over the slice of sequence numbers and send the sequence numbers one by one.
     4. Wait and listen for the EVENT LISTENER to send either the MATCH END - OK or MATCH END - ERROR message.
 6. Exit the application.
+
+## Testing
+To run the included unit tests, either execute `make test` in a terminal from the base directory or run `go test` in terminal from the `src` directory.
 
 ## Thoughts on improvements in future iterations
 ### Enumerated types
