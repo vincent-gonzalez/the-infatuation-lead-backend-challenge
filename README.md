@@ -129,6 +129,7 @@ Logic:
 - After all the sequence numbers are sent, the function waits for the EVENT LISTENER to send either the MATCH END - OK or MATCH END - ERROR message.
 - The MATCH END message is sent back to the caller once it is received.
 
+### **utils.go**
 #### **CreateConnection() (net.Conn, error)**
 Parameters:
 - protocol `string` - the network protocol to connect to the EVENT SOURCE or EVENT LISTENER.
@@ -146,16 +147,16 @@ Uses the `net.Dial()` function to create a new network connection using the supp
 ### **EventFunctions_test.go**
 Contains unit tests for the event functions.
 
-#### **TestParseEvent(t *testing.T)**
+#### **TestParseEvent(t \*testing.T)**
 Tests that a valid message is parsed correctly.
 
-#### **TestParseEventBadEvent (t *testing.T)**
+#### **TestParseEventBadEvent (t \*testing.T)**
 Tests that a malformed message is not parsed.
 
-#### **TestFindMatchEvents(t *testing.T)**
+#### **TestFindMatchEvents(t \*testing.T)**
 Tests that matches are found with known good input that contains match events.
 
-#### **TestNoMatchEventsFound(t *testing.T)**
+#### **TestNoMatchEventsFound(t \*testing.T)**
 Tests that match events are not found when the input is known to not have match events.
 
 #### **testSlicesAreEqual(a, b []uint64) bool**
