@@ -8,11 +8,13 @@ import (
 	"strings"
 )
 
+const (
+	dataDelimiter       = "|"
+	numberOfEventFields = 4
+)
+
 func ReceiveEvents(eventSourceConnection net.Conn) ([]LikeEvent, error) {
 	var likeEvents []LikeEvent
-	// TODO - these magic constants should be defined in the environment configuration
-	const dataDelimiter = "|"
-	const numberOfEventFields = 4
 
 	scanner := bufio.NewScanner(eventSourceConnection)
 	// wait for EVENT SOURCE to send start message
